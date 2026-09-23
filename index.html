@@ -101,6 +101,16 @@ footer{text-align:center;color:#7f97ad;font-size:12px;margin:17px 0}
 </section>
 
 <section class="panel result hidden" id="resultPanel">
+  <div class="name-box" style="margin:18px 0;padding:16px;border:1px solid rgba(255,255,255,.15);border-radius:16px;background:rgba(255,255,255,.05);">
+    <label for="scoreName" style="display:block;margin-bottom:8px;font-weight:700;">Enter your name or nickname</label>
+    <input id="scoreName" type="text" maxlength="50" placeholder="Your name"
+      style="width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #4deaff;background:#07111f;color:#eef7ff;font-size:16px;">
+    <button class="primary" id="submitScoreBtn" type="button" onclick="submitScore()" style="margin-top:12px;width:100%;">
+      Submit Score
+    </button>
+    <div id="submitStatus" style="margin-top:10px;font-size:13px;"></div>
+  </div>
+
   <div class="big">🏆</div>
   <h2>Mission Complete!</h2>
   <p id="resultText"></p>
@@ -180,23 +190,44 @@ function showResults(){
  $("resultText").textContent=`You scored ${score} out of ${questions.length} (${percent}%). ${percent>=75?"Excellent work, future engineer!":"Keep exploring robotics and try again to improve your score."}`;
  $("review").innerHTML="<strong>Quick revision</strong>"+questions.map((q,i)=>`<div><b>${i+1}. ${q.topic}</b><br>${q.a[q.c]}</div>`).join("");
 
- // Ask for the student's name and submit the final score to Google Forms.
- let name=prompt("Enter your name or nickname to save your score:");
- if(name===null || !name.trim()) name="Anonymous";
+ window.finalScore=score;
+ window.totalQuestions=questions.length;
+ $("submitStatus").textContent="";
+ $("scoreName").value="";
+ $("scoreName").focus();
+}
+
+function submitScore(){
+ const input=$("scoreName");
+ const status=$("submitStatus");
+ const btn=$("submitScoreBtn");
+ const name=(input.value.trim() || "Anonymous").slice(0,50);
 
  const formUrl="https://docs.google.com/forms/d/e/1FAIpQLSd-FyvNOdy9gV9przvAGmzw1Q3tyIVvDSD5bNRwqNuUanWJcQ/formResponse";
  const data=new URLSearchParams();
- data.append("entry.922638768",name.trim().slice(0,50));
- data.append("entry.1209659109",String(score));
- data.append("entry.353662563",String(questions.length));
+ data.append("entry.922638768",name);
+ data.append("entry.1209659109",String(window.finalScore||0));
+ data.append("entry.353662563",String(window.totalQuestions||questions.length));
+
+ btn.disabled=true;
+ btn.textContent="Submitting...";
+ status.textContent="Saving your score...";
 
  fetch(formUrl,{
    method:"POST",
    mode:"no-cors",
    headers:{"Content-Type":"application/x-www-form-urlencoded"},
    body:data.toString()
- }).catch(()=>{});
+ }).then(()=>{
+   status.textContent="Score submitted! ✓";
+   btn.textContent="Score Submitted";
+ }).catch(()=>{
+   status.textContent="Could not submit automatically. Please try again.";
+   btn.disabled=false;
+   btn.textContent="Submit Score";
+ });
 }
+
 function restartQuiz(){
  index=0;score=0;history=[];
  $("quizPanel").classList.remove("hidden");$("resultPanel").classList.add("hidden");
